@@ -188,7 +188,13 @@ Current status of that path:
 
 - preflight and smoke scripts exist
 - Docker plus NVIDIA container runtime are ready on the first candidate host
-- the remaining blocker is `NGC_API_KEY` plus the actual NIM image launch
+- `NGC_API_KEY` auth to `nvcr.io` worked
+- the first NIM image pull worked
+- the pulled image reports:
+  - `com.nvidia.nim.version = 1.8.4`
+  - `CUDA_VERSION = 12.8.0`
+- the first NIM launch failed on a concrete requirement:
+  - `cuda>=12.8`
 
 ## Strongest Public Artifact
 

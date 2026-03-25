@@ -75,15 +75,26 @@ What is true now:
 - Docker is installed
 - NVIDIA container runtime is installed and configured
 - a CUDA base container can see the RTX 4090 successfully
-- `NGC_API_KEY` is still missing
+- `NGC_API_KEY` worked for `docker login nvcr.io`
+- the first NIM image pull succeeded:
+  - `nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-8b-v1:latest`
+- `docker image inspect` on the pulled image reports:
+  - `com.nvidia.nim.version = 1.8.4`
+  - `CUDA_VERSION = 12.8.0`
+- the first NIM launch failed immediately with a concrete runtime requirement
+  error:
+  - `nvidia-container-cli: requirement error: unsatisfied condition: cuda>=12.8`
 
-So the current self-hosted path is now blocked by NGC auth and the actual NIM
-image pull, not by general container runtime setup.
+So the current self-hosted path is no longer blocked by registry auth or basic
+container runtime setup. It is now blocked by driver/runtime compatibility for
+the chosen NIM image.
 
 ## Minimal Next Step
 
-1. Export `NGC_API_KEY`.
-2. Pull and run a small single-GPU NIM image.
+1. Choose either:
+   - a newer NVIDIA driver/runtime path that satisfies `cuda>=12.8`, or
+   - an older / different NIM image or tag that supports the current driver
+2. Pull and run the chosen single-GPU NIM image.
 3. Check:
    - `/v1/health/ready`
    - `/v1/models`
@@ -93,8 +104,16 @@ image pull, not by general container runtime setup.
 ## Suggested First Self-Hosted Target
 
 Use a small single-GPU-compatible profile first rather than jumping directly to
-the biggest model from the hosted proof. The exact image choice should follow
-whatever the NVIDIA docs / profile tooling says is runnable on the 4090.
+the biggest model from the hosted proof.
+
+The first attempted target was:
+
+- `nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-8b-v1:latest`
+
+That image pulled successfully, but the first launch attempt failed on the
+current host with:
+
+- `cuda>=12.8` required by the container prestart checks
 
 ## Repo Support
 
@@ -111,4 +130,6 @@ The strongest current read is:
 
 - self-hosted NIM proof looks feasible on the local RTX 4090 host
 - the container runtime path is now ready
-- the remaining blocker is `NGC_API_KEY` plus the actual NIM image launch
+- registry auth works
+- the first remaining blocker is driver/runtime compatibility for the chosen
+  NIM image, not basic self-hosting mechanics
