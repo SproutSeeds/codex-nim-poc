@@ -195,6 +195,10 @@ Current status of that path:
   - `CUDA_VERSION = 12.8.0`
 - the first NIM launch failed on a concrete requirement:
   - `cuda>=12.8`
+- naive older-release pull guesses are not enough:
+  - `nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-8b-v1:1.6.0` returned
+    `manifest unknown`
+  - `nvcr.io/nim/nvidia/llm-nim:1.6.0` also returned `manifest unknown`
 
 ## Strongest Public Artifact
 

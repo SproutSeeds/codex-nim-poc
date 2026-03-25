@@ -89,11 +89,22 @@ So the current self-hosted path is no longer blocked by registry auth or basic
 container runtime setup. It is now blocked by driver/runtime compatibility for
 the chosen NIM image.
 
+One more useful refinement:
+
+- direct older-release pull guesses are not enough
+- both of these returned `manifest unknown`:
+  - `nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-8b-v1:1.6.0`
+  - `nvcr.io/nim/nvidia/llm-nim:1.6.0`
+
+So the next clean branch point is exact NGC repository/tag inventory or a host
+driver/runtime upgrade, not more blind tag guessing.
+
 ## Minimal Next Step
 
 1. Choose either:
    - a newer NVIDIA driver/runtime path that satisfies `cuda>=12.8`, or
-   - an older / different NIM image or tag that supports the current driver
+   - an exact older / different NIM image or tag confirmed by NGC inventory to
+     support the current driver
 2. Pull and run the chosen single-GPU NIM image.
 3. Check:
    - `/v1/health/ready`
