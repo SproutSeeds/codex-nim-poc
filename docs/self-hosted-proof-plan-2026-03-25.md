@@ -43,11 +43,7 @@ Key doc points relevant to this lane:
 
 Current best candidate:
 
-- host: `umbra`
-- access path:
-  - `ssh -i ~/.ssh/collab_umbra codyr@192.168.1.162`
-- OS:
-  - `Ubuntu 24.04.3 LTS` inside WSL2
+- local Ubuntu `24.04.3 LTS` environment inside WSL2
 - GPU:
   - `NVIDIA GeForce RTX 4090`
   - `24564 MiB`
@@ -68,27 +64,31 @@ What is already good:
 - free disk is ample for a first pass
 - memory is reasonable for a 24 GB single-GPU proof path
 
-What is still missing:
+What was missing at first:
 
-- `docker` is not installed in the WSL2 environment
-- `docker` is also not available on the Windows host side
-- `nvidia-container-toolkit` / `nvidia-ctk` is not present
+- `docker` was not installed
+- `nvidia-container-toolkit` / `nvidia-ctk` was not present
 - `NGC_API_KEY` was not provided for this path
 
-So the current self-hosted path is blocked by runtime setup plus an NGC key,
-not by GPU absence.
+What is true now:
+
+- Docker is installed
+- NVIDIA container runtime is installed and configured
+- a CUDA base container can see the RTX 4090 successfully
+- `NGC_API_KEY` is still missing
+
+So the current self-hosted path is now blocked by NGC auth and the actual NIM
+image pull, not by general container runtime setup.
 
 ## Minimal Next Step
 
-1. Install Docker on the target Linux environment.
-2. Install NVIDIA Container Toolkit / runtime integration.
-3. Export `NGC_API_KEY`.
-4. Pull and run a small single-GPU NIM image.
-5. Check:
+1. Export `NGC_API_KEY`.
+2. Pull and run a small single-GPU NIM image.
+3. Check:
    - `/v1/health/ready`
    - `/v1/models`
    - `/v1/responses`
-6. Then run the local self-hosted smoke script in this repo.
+4. Then run the local self-hosted smoke script in this repo.
 
 ## Suggested First Self-Hosted Target
 
@@ -109,6 +109,6 @@ This repo now includes:
 
 The strongest current read is:
 
-- self-hosted NIM proof looks feasible on `umbra`
-- it is blocked by missing container runtime setup and `NGC_API_KEY`
-- this is now an operational setup gap, not an uncertainty about where to try
+- self-hosted NIM proof looks feasible on the local RTX 4090 host
+- the container runtime path is now ready
+- the remaining blocker is `NGC_API_KEY` plus the actual NIM image launch

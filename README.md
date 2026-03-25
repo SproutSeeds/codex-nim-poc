@@ -184,6 +184,12 @@ behavior:
 ./scripts/smoke-self-hosted-nim.sh
 ```
 
+Current status of that path:
+
+- preflight and smoke scripts exist
+- Docker plus NVIDIA container runtime are ready on the first candidate host
+- the remaining blocker is `NGC_API_KEY` plus the actual NIM image launch
+
 ## Strongest Public Artifact
 
 This repo is meant to be linkable from the upstream Codex thread once the saved
