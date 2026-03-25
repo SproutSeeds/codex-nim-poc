@@ -12,13 +12,32 @@ The current best public fit on the Codex side is:
 - `openai/codex#5458`
   - https://github.com/openai/codex/issues/5458
 
-The current strongest local proof is here:
+The current strongest recorded proof is here:
 
 - `docs/first-live-run-2026-03-25.md`
 
+## Current Strongest Read
+
+The strongest current read is:
+
+- hosted NVIDIA NIM at `https://integrate.api.nvidia.com/v1` works for
+  `GET /v1/models`
+- the same hosted path returned `404 page not found` for direct
+  `POST /v1/responses` on two tested NVIDIA models
+- real `codex exec` through a custom provider fails at that same
+  `/v1/responses` boundary
+- manual `chat/completions` works for
+  `nvidia/nemotron-3-super-120b-a12b`
+- NVIDIA's `chat_template_kwargs.force_nonempty_content = true` guidance
+  materially changes the chat response shape
+
+So `openai/codex#5458` still matters, but not as the first blocker on this
+tested hosted path. The first blocker is hosted `/v1/responses` availability or
+compatibility.
+
 ## Why This Exists
 
-Two current facts make this lane worth proving directly:
+Two current facts made this lane worth proving directly:
 
 1. Codex already supports custom model providers that speak the Responses API.
 2. NVIDIA NIM now advertises OpenAI-compatible APIs including experimental
@@ -26,7 +45,7 @@ Two current facts make this lane worth proving directly:
    Super model card includes coding-agent guidance that mentions an
    `extra_body` tweak for agent apps.
 
-That means the likely outcomes are now:
+That means the meaningful outcomes are:
 
 - direct compatibility works
 - direct compatibility mostly works but needs provider tuning
@@ -35,9 +54,14 @@ That means the likely outcomes are now:
 
 ## Current Hypothesis
 
-The strongest likely break is not authentication or base URL wiring.
+The first blocking boundary on the tested hosted path is not authentication or
+base URL wiring.
 
-The strongest likely break is request-shape flexibility:
+The first blocking boundary is `/v1/responses` availability or compatibility on
+the hosted NVIDIA endpoint.
+
+The second question, if a working Responses path exists, is request-shape
+flexibility:
 
 - Codex config already supports `base_url`, headers, query params, retries,
   idle timeouts, and websocket toggles.
@@ -45,8 +69,8 @@ The strongest likely break is request-shape flexibility:
 - NVIDIA's current coding-agent guidance for at least one Nemotron endpoint
   includes `extra_body.chat_template_kwargs.force_nonempty_content = true`.
 
-If direct `/v1/responses` requests work but Codex runs fail because that extra
-body is needed, `openai/codex#5458` becomes the natural upstream lane.
+If direct `/v1/responses` requests work but Codex runs still fail because that
+extra body is needed, `openai/codex#5458` becomes the natural upstream lane.
 
 ## Repo Layout
 
@@ -93,7 +117,7 @@ Start from:
 cp .env.example .env
 ```
 
-## First Pass
+## Reproduction Flow
 
 1. Run the direct API smoke:
 
@@ -122,6 +146,18 @@ cp .env.example .env
 5. If the direct API smoke works but the Codex smoke fails, compare the saved
    request/response artifacts and decide whether the missing primitive belongs
    in `openai/codex#5458`.
+
+## Strongest Public Artifact
+
+This repo is meant to be linkable from the upstream Codex thread once the saved
+findings are stable enough to be maintainer-useful.
+
+The intended public use is:
+
+- point to the scripts
+- point to the saved live-run note
+- keep the upstream comment narrow and evidence-backed
+- avoid overclaiming NVIDIA compatibility beyond the exact hosted path tested
 
 ## Notes
 
