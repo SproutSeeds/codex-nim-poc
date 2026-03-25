@@ -12,6 +12,14 @@ This checklist keeps the lane evidence-first.
 - tool-calling request shape is accepted if the model advertises tool use
 - structured output does not regress if that matters for the chosen model
 
+## Self-Hosted Separation Layer
+
+- candidate host passes `scripts/preflight-self-hosted-nim.sh`
+- self-hosted NIM reaches `/v1/health/ready`
+- self-hosted `/v1/models` succeeds
+- self-hosted `/v1/responses` is checked before making broader Codex claims
+- if self-hosted differs from hosted Integrate, record that split explicitly
+
 ## Codex Provider Layer
 
 - Codex custom provider config is enough to reach the endpoint

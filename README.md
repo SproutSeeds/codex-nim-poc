@@ -83,6 +83,9 @@ extra body is needed, `openai/codex#5458` becomes the natural upstream lane.
   - recorded hosted proof so far
 - `docs/hosted-responses-matrix-2026-03-25.md`
   - widened `/v1/responses` check across NVIDIA, Meta, and Mistral models
+- `docs/self-hosted-proof-plan-2026-03-25.md`
+  - exact next-step plan for separating hosted Integrate behavior from
+    self-hosted NIM behavior
 - `scripts/smoke-nim-api.sh`
   - direct NVIDIA NIM smoke against `/v1/models` and `/v1/responses`
 - `scripts/smoke-nim-responses-matrix.sh`
@@ -92,6 +95,10 @@ extra body is needed, `openai/codex#5458` becomes the natural upstream lane.
     `chat_template_kwargs.force_nonempty_content`
 - `scripts/smoke-codex-provider.sh`
   - optional real `codex exec` smoke using a custom provider override
+- `scripts/preflight-self-hosted-nim.sh`
+  - host-readiness check for a self-hosted NIM proof path
+- `scripts/smoke-self-hosted-nim.sh`
+  - local endpoint validation for a running self-hosted NIM
 
 ## Required Environment
 
@@ -109,6 +116,14 @@ Optional:
   - raw JSON object merged into the request body during direct API smoke tests
 - `POC_CODEX_SANDBOX`
   - default in the Codex smoke script is `read-only`
+- `NGC_API_KEY`
+  - required for self-hosted NIM pulls from NGC
+- `SELF_HOSTED_NIM_BASE_URL`
+  - default: `http://127.0.0.1:8000/v1`
+- `SELF_HOSTED_NIM_MODEL`
+  - optional model override if `/v1/models` does not return the desired served
+    id
+- `SELF_HOSTED_NIM_PROMPT`
 
 Instead of exporting variables into the launching shell, you can place them in
 `./.env` inside this repo. The smoke scripts will source that file
@@ -149,6 +164,25 @@ cp .env.example .env
 5. If the direct API smoke works but the Codex smoke fails, compare the saved
    request/response artifacts and decide whether the missing primitive belongs
    in `openai/codex#5458`.
+
+## Self-Hosted Refinement Path
+
+If you want to separate hosted Integrate behavior from self-hosted NIM
+behavior:
+
+1. Read `docs/self-hosted-proof-plan-2026-03-25.md`
+2. Run:
+
+```bash
+./scripts/preflight-self-hosted-nim.sh
+```
+
+3. Bring up a local self-hosted NIM following the NVIDIA docs
+4. Then run:
+
+```bash
+./scripts/smoke-self-hosted-nim.sh
+```
 
 ## Strongest Public Artifact
 
