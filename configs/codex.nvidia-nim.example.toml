@@ -1,0 +1,21 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+model = "nvidia/nemotron-3-super"
+model_provider = "nvidia_nim"
+
+[model_providers.nvidia_nim]
+name = "NVIDIA NIM"
+base_url = "https://integrate.api.nvidia.com/v1"
+env_key = "NVIDIA_API_KEY"
+wire_api = "responses"
+supports_websockets = false
+request_max_retries = 2
+stream_max_retries = 4
+stream_idle_timeout_ms = 600000
+
+# Current Codex does not support provider-level request-body injection.
+# If direct NIM compatibility requires this shape, it likely belongs in:
+#   https://github.com/openai/codex/issues/5458
+#
+# Hypothetical future shape:
+# extra_body = { chat_template_kwargs = { force_nonempty_content = true } }
