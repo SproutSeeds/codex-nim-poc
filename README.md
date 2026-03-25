@@ -199,6 +199,20 @@ Current status of that path:
   - `nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-8b-v1:1.6.0` returned
     `manifest unknown`
   - `nvcr.io/nim/nvidia/llm-nim:1.6.0` also returned `manifest unknown`
+- exact NGC repo inventory is now available for this model:
+  - `1.8.4`
+  - `1.8.3`
+  - `1.8`
+  - `1`
+  - `1.8.2`
+  - `latest`
+- the oldest exposed tag still does not solve the host-compatibility problem:
+  - `nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-8b-v1:1.8.2`
+  - `docker image inspect` still shows `CUDA_VERSION = 12.8.0`
+  - short launch check still fails on `cuda>=12.8`
+
+For this exact model repository, the cleanest next move now looks like a host
+driver/runtime upgrade rather than more blind tag guessing.
 
 ## Strongest Public Artifact
 

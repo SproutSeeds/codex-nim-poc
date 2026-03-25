@@ -95,6 +95,18 @@ One more useful refinement:
 - both of these returned `manifest unknown`:
   - `nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-8b-v1:1.6.0`
   - `nvcr.io/nim/nvidia/llm-nim:1.6.0`
+- exact NGC inventory for this repository now shows only:
+  - `1.8.4`
+  - `1.8.3`
+  - `1.8`
+  - `1`
+  - `1.8.2`
+  - `latest`
+- the oldest exposed tag still does not lower the CUDA floor:
+  - `nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-8b-v1:1.8.2`
+  - `docker image inspect` still reports `CUDA_VERSION = 12.8.0`
+  - a short `docker run` check still fails on:
+    - `nvidia-container-cli: requirement error: unsatisfied condition: cuda>=12.8`
 
 So the next clean branch point is exact NGC repository/tag inventory or a host
 driver/runtime upgrade, not more blind tag guessing.
@@ -103,8 +115,8 @@ driver/runtime upgrade, not more blind tag guessing.
 
 1. Choose either:
    - a newer NVIDIA driver/runtime path that satisfies `cuda>=12.8`, or
-   - an exact older / different NIM image or tag confirmed by NGC inventory to
-     support the current driver
+   - a different self-hosted model repository altogether, if we specifically
+     want to avoid a driver change on this host
 2. Pull and run the chosen single-GPU NIM image.
 3. Check:
    - `/v1/health/ready`
@@ -142,5 +154,7 @@ The strongest current read is:
 - self-hosted NIM proof looks feasible on the local RTX 4090 host
 - the container runtime path is now ready
 - registry auth works
-- the first remaining blocker is driver/runtime compatibility for the chosen
-  NIM image, not basic self-hosting mechanics
+- for this exact model repository, the oldest exposed tag still requires
+  `cuda>=12.8`
+- the first remaining blocker is now more specifically a host driver/runtime
+  upgrade, not basic self-hosting mechanics
