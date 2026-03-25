@@ -15,6 +15,7 @@ The current best public fit on the Codex side is:
 The current strongest recorded proof is here:
 
 - `docs/first-live-run-2026-03-25.md`
+- `docs/hosted-responses-matrix-2026-03-25.md`
 
 ## Current Strongest Read
 
@@ -23,7 +24,7 @@ The strongest current read is:
 - hosted NVIDIA NIM at `https://integrate.api.nvidia.com/v1` works for
   `GET /v1/models`
 - the same hosted path returned `404 page not found` for direct
-  `POST /v1/responses` on two tested NVIDIA models
+  `POST /v1/responses` across a wider six-model matrix
 - real `codex exec` through a custom provider fails at that same
   `/v1/responses` boundary
 - manual `chat/completions` works for
@@ -80,6 +81,8 @@ extra body is needed, `openai/codex#5458` becomes the natural upstream lane.
   - what we need to prove before making upstream claims
 - `docs/first-live-run-2026-03-25.md`
   - recorded hosted proof so far
+- `docs/hosted-responses-matrix-2026-03-25.md`
+  - widened `/v1/responses` check across NVIDIA, Meta, and Mistral models
 - `scripts/smoke-nim-api.sh`
   - direct NVIDIA NIM smoke against `/v1/models` and `/v1/responses`
 - `scripts/smoke-nim-responses-matrix.sh`

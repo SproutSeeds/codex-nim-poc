@@ -41,6 +41,9 @@ This checklist keeps the lane evidence-first.
 
 - If direct API fails on `/v1/responses`, that is primarily an NVIDIA/API-side
   compatibility question.
+- If a widened hosted matrix shows the same `/v1/responses` `404` across
+  multiple models or vendors on the same endpoint, prefer describing that as a
+  hosted-surface compatibility boundary rather than a single-model quirk.
 - If direct API works but Codex cannot express the needed request body, that is
   primarily a Codex primitive question and likely belongs in `openai/codex#5458`.
 - If both work, we can publish a narrow example-driven compatibility note
