@@ -72,6 +72,10 @@ Optional:
 - `CODEX_SANDBOX`
   - default in the smoke script is `read-only`
 
+Instead of exporting variables into the launching shell, you can place them in
+`./.env` inside this repo. The smoke scripts will source that file
+automatically.
+
 ## First Pass
 
 1. Run the direct API smoke:

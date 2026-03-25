@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [[ -f "$ROOT_DIR/.env" ]]; then
+  # shellcheck disable=SC1090
+  source "$ROOT_DIR/.env"
+fi
+
 : "${NVIDIA_API_KEY:?set NVIDIA_API_KEY}"
 : "${NIM_MODEL:=nvidia/nemotron-3-super}"
 
 BASE_URL="${NIM_BASE_URL:-https://integrate.api.nvidia.com/v1}"
 PROMPT="${NIM_PROMPT:-Reply with the single word OK.}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ARTIFACT_DIR="${ARTIFACT_DIR:-$ROOT_DIR/artifacts/$STAMP}"
 mkdir -p "$ARTIFACT_DIR"
 
