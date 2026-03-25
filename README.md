@@ -59,7 +59,8 @@ body is needed, `openai/codex#5458` becomes the natural upstream lane.
 
 - `NVIDIA_API_KEY`
 - `NIM_MODEL`
-  - example: `nvidia/nemotron-3-super`
+  - optional
+  - default: `nvidia/nemotron-3-super`
 
 Optional:
 
