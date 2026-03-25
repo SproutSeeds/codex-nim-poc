@@ -11,6 +11,8 @@ custom provider using the Responses API.
 
 - direct `GET https://integrate.api.nvidia.com/v1/models`: `200`
 - direct `POST https://integrate.api.nvidia.com/v1/responses`: `404 page not found`
+- second direct `POST https://integrate.api.nvidia.com/v1/responses` check with
+  `nvidia/llama-3.3-nemotron-super-49b-v1`: `404 page not found`
 - `codex exec` through a custom provider configured for
   `https://integrate.api.nvidia.com/v1` and `wire_api = "responses"`:
   repeated `404 Not Found` against `/v1/responses`
@@ -51,6 +53,9 @@ The strongest current read is:
   `extra_body` primitive can help direct integration
 - the `force_nonempty_content` guidance is still real and relevant for
   coding-agent-style chat-completions integrations
+- NVIDIA release notes currently document experimental `/v1/responses`
+  behavior for NIM LLMs, which makes the hosted `404` result stronger as a
+  public compatibility/data point rather than just a speculative mismatch
 
 ## Implication
 

@@ -12,6 +12,10 @@ The current best public fit on the Codex side is:
 - `openai/codex#5458`
   - https://github.com/openai/codex/issues/5458
 
+The current strongest local proof is here:
+
+- `docs/first-live-run-2026-03-25.md`
+
 ## Why This Exists
 
 Two current facts make this lane worth proving directly:
@@ -50,8 +54,15 @@ body is needed, `openai/codex#5458` becomes the natural upstream lane.
   - example Codex custom-provider config
 - `docs/compatibility-checklist.md`
   - what we need to prove before making upstream claims
+- `docs/first-live-run-2026-03-25.md`
+  - recorded hosted proof so far
 - `scripts/smoke-nim-api.sh`
   - direct NVIDIA NIM smoke against `/v1/models` and `/v1/responses`
+- `scripts/smoke-nim-responses-matrix.sh`
+  - direct `/v1/responses` checks across multiple NVIDIA models
+- `scripts/smoke-nim-chat-fallback.sh`
+  - `chat/completions` comparison with and without
+    `chat_template_kwargs.force_nonempty_content`
 - `scripts/smoke-codex-provider.sh`
   - optional real `codex exec` smoke using a custom provider override
 
@@ -76,6 +87,12 @@ Instead of exporting variables into the launching shell, you can place them in
 `./.env` inside this repo. The smoke scripts will source that file
 automatically.
 
+Start from:
+
+```bash
+cp .env.example .env
+```
+
 ## First Pass
 
 1. Run the direct API smoke:
@@ -84,13 +101,25 @@ automatically.
 ./scripts/smoke-nim-api.sh
 ```
 
-2. If that succeeds, run the real Codex provider smoke:
+2. Run the hosted responses matrix:
+
+```bash
+./scripts/smoke-nim-responses-matrix.sh
+```
+
+3. Run the chat fallback comparison:
+
+```bash
+./scripts/smoke-nim-chat-fallback.sh
+```
+
+4. If that succeeds, run the real Codex provider smoke:
 
 ```bash
 ./scripts/smoke-codex-provider.sh
 ```
 
-3. If the direct API smoke works but the Codex smoke fails, compare the saved
+5. If the direct API smoke works but the Codex smoke fails, compare the saved
    request/response artifacts and decide whether the missing primitive belongs
    in `openai/codex#5458`.
 

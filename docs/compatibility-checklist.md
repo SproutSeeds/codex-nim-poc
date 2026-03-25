@@ -6,6 +6,8 @@ This checklist keeps the lane evidence-first.
 
 - `GET /v1/models` succeeds against the chosen NIM endpoint
 - `POST /v1/responses` succeeds with a minimal non-streaming request
+- a second `/v1/responses` check on another NVIDIA model does not contradict
+  the first result
 - streamed `POST /v1/responses` succeeds if the endpoint claims streaming support
 - tool-calling request shape is accepted if the model advertises tool use
 - structured output does not regress if that matters for the chosen model
@@ -33,6 +35,7 @@ This checklist keeps the lane evidence-first.
   - NVIDIA endpoint contract gap
   - Codex custom-provider gap
   - missing provider-level request-body injection
+  - docs/hosted-behavior mismatch
 
 ## Public Rollout Guidance
 
