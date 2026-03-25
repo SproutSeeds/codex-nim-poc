@@ -8,11 +8,11 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
 fi
 
 : "${NVIDIA_API_KEY:?set NVIDIA_API_KEY}"
-: "${NIM_MODEL:=nvidia/nemotron-3-super}"
+: "${NIM_MODEL:=nvidia/nemotron-3-super-120b-a12b}"
 
 BASE_URL="${NIM_BASE_URL:-https://integrate.api.nvidia.com/v1}"
 PROMPT="${NIM_PROMPT:-Reply with the single word OK.}"
-SANDBOX_MODE="${CODEX_SANDBOX:-read-only}"
+SANDBOX_MODE="${POC_CODEX_SANDBOX:-read-only}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 ARTIFACT_DIR="${ARTIFACT_DIR:-$ROOT_DIR/artifacts/$STAMP-codex}"
 mkdir -p "$ARTIFACT_DIR"

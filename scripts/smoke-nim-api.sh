@@ -8,7 +8,7 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
 fi
 
 : "${NVIDIA_API_KEY:?set NVIDIA_API_KEY}"
-: "${NIM_MODEL:=nvidia/nemotron-3-super}"
+: "${NIM_MODEL:=nvidia/nemotron-3-super-120b-a12b}"
 
 BASE_URL="${NIM_BASE_URL:-https://integrate.api.nvidia.com/v1}"
 PROMPT="${NIM_PROMPT:-Reply with the single word OK.}"

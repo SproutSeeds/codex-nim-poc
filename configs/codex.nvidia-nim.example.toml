@@ -1,6 +1,6 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
-model = "nvidia/nemotron-3-super"
+model = "nvidia/nemotron-3-super-120b-a12b"
 model_provider = "nvidia_nim"
 
 [model_providers.nvidia_nim]

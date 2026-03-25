@@ -60,7 +60,7 @@ body is needed, `openai/codex#5458` becomes the natural upstream lane.
 - `NVIDIA_API_KEY`
 - `NIM_MODEL`
   - optional
-  - default: `nvidia/nemotron-3-super`
+  - default: `nvidia/nemotron-3-super-120b-a12b`
 
 Optional:
 
@@ -69,8 +69,8 @@ Optional:
 - `NIM_PROMPT`
 - `NIM_EXTRA_BODY_JSON`
   - raw JSON object merged into the request body during direct API smoke tests
-- `CODEX_SANDBOX`
-  - default in the smoke script is `read-only`
+- `POC_CODEX_SANDBOX`
+  - default in the Codex smoke script is `read-only`
 
 Instead of exporting variables into the launching shell, you can place them in
 `./.env` inside this repo. The smoke scripts will source that file
