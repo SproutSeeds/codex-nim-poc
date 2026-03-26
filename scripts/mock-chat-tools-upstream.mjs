@@ -9,6 +9,8 @@ const artifactDir = process.env.ARTIFACT_DIR || process.cwd();
 const modelId = process.env.MOCK_MODEL || "mock-nvidia-nim";
 const callId = process.env.MOCK_TOOL_CALL_ID || "mock-call-1";
 const command = process.env.MOCK_TOOL_COMMAND || "printf shim-tool-ok";
+const commandsJson = process.env.MOCK_TOOL_COMMANDS_JSON || "";
+const toolCallMode = process.env.MOCK_TOOL_CALL_MODE || "parallel";
 
 mkdirSync(artifactDir, { recursive: true });
 
@@ -84,6 +86,45 @@ function normalizeToolResultContent(value) {
   return lines.at(-1) || "shim-tool-ok";
 }
 
+function parseCommands() {
+  if (!commandsJson.trim()) {
+    return [{ id: callId, command }];
+  }
+
+  const parsed = JSON.parse(commandsJson);
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error("MOCK_TOOL_COMMANDS_JSON must be a non-empty JSON array");
+  }
+
+  return parsed.map((entry, index) => {
+    if (typeof entry === "string") {
+      return {
+        id: `mock-call-${index + 1}`,
+        command: entry,
+      };
+    }
+
+    if (
+      entry &&
+      typeof entry === "object" &&
+      typeof entry.command === "string" &&
+      entry.command.length > 0
+    ) {
+      return {
+        id:
+          typeof entry.id === "string" && entry.id.length > 0
+            ? entry.id
+            : `mock-call-${index + 1}`,
+        command: entry.command,
+      };
+    }
+
+    throw new Error("MOCK_TOOL_COMMANDS_JSON entries must be strings or {command,id?} objects");
+  });
+}
+
+const commandSpecs = parseCommands();
+
 const server = http.createServer(async (req, res) => {
   if (!req.url) {
     res.writeHead(400, jsonHeaders(400).headers);
@@ -134,12 +175,21 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const toolMessage = (body.messages || []).find(
-    (message) => message?.role === "tool" && message?.tool_call_id === callId,
-  );
+  const toolMessagesById = new Map();
+  for (const message of body.messages || []) {
+    if (message?.role === "tool" && typeof message?.tool_call_id === "string") {
+      toolMessagesById.set(message.tool_call_id, message);
+    }
+  }
+  const completedCommandSpecs = commandSpecs.filter((spec) => toolMessagesById.has(spec.id));
+  const allToolMessagesPresent = completedCommandSpecs.length === commandSpecs.length;
+  const nextPendingSpec = commandSpecs[completedCommandSpecs.length] || null;
 
   let responseBody;
-  if (toolMessage) {
+  if (allToolMessagesPresent) {
+    const toolOutputs = commandSpecs.map((spec) =>
+      normalizeToolResultContent(toolMessagesById.get(spec.id)?.content),
+    );
     responseBody = {
       id: `mock-chat-${requestId}`,
       object: "chat.completion",
@@ -150,7 +200,7 @@ const server = http.createServer(async (req, res) => {
           index: 0,
           message: {
             role: "assistant",
-            content: normalizeToolResultContent(toolMessage.content),
+            content: toolOutputs.join("\n"),
           },
           finish_reason: "stop",
         },
@@ -161,7 +211,7 @@ const server = http.createServer(async (req, res) => {
         total_tokens: 103,
       },
     };
-  } else {
+  } else if (completedCommandSpecs.length > 0 && toolCallMode === "sequential" && nextPendingSpec) {
     responseBody = {
       id: `mock-chat-${requestId}`,
       object: "chat.completion",
@@ -175,14 +225,46 @@ const server = http.createServer(async (req, res) => {
             content: null,
             tool_calls: [
               {
-                id: callId,
+                id: nextPendingSpec.id,
                 type: "function",
                 function: {
                   name: "exec_command",
-                  arguments: JSON.stringify({ cmd: command }),
+                  arguments: JSON.stringify({ cmd: nextPendingSpec.command }),
                 },
               },
             ],
+          },
+          finish_reason: "tool_calls",
+        },
+      ],
+      usage: {
+        prompt_tokens: 100,
+        completion_tokens: 10,
+        total_tokens: 110,
+      },
+    };
+  } else {
+    const initialToolSpecs =
+      toolCallMode === "sequential" ? commandSpecs.slice(0, 1) : commandSpecs;
+    responseBody = {
+      id: `mock-chat-${requestId}`,
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: body.model || modelId,
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant",
+            content: null,
+            tool_calls: initialToolSpecs.map((spec) => ({
+              id: spec.id,
+              type: "function",
+              function: {
+                name: "exec_command",
+                arguments: JSON.stringify({ cmd: spec.command }),
+              },
+            })),
           },
           finish_reason: "tool_calls",
         },
@@ -201,6 +283,13 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  writeArtifact("mock-chat-tools-server-info.json", { port, modelId, callId, command });
+  writeArtifact("mock-chat-tools-server-info.json", {
+    port,
+    modelId,
+    callId,
+    command,
+    commandSpecs,
+    toolCallMode,
+  });
   console.error(`mock-chat-tools-upstream listening on 127.0.0.1:${port}`);
 });

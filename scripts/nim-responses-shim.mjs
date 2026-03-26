@@ -266,6 +266,28 @@ function buildChatMessages(requestBody) {
   const messages = [];
   const unsupportedItems = [];
   const seenToolCallIds = new Set();
+  let pendingAssistantToolCalls = [];
+
+  function enqueueAssistantToolCall(toolCall) {
+    if (!toolCall || seenToolCallIds.has(toolCall.id)) {
+      return;
+    }
+    if (pendingAssistantToolCalls.some((pendingToolCall) => pendingToolCall.id === toolCall.id)) {
+      return;
+    }
+    pendingAssistantToolCalls.push(toolCall);
+  }
+
+  function flushPendingAssistantToolCalls() {
+    if (pendingAssistantToolCalls.length === 0) {
+      return;
+    }
+    messages.push(makeAssistantToolCallMessage(pendingAssistantToolCalls));
+    for (const toolCall of pendingAssistantToolCalls) {
+      seenToolCallIds.add(toolCall.id);
+    }
+    pendingAssistantToolCalls = [];
+  }
 
   if (typeof requestBody.instructions === "string" && requestBody.instructions.trim()) {
     messages.push({ role: "system", content: requestBody.instructions });
@@ -277,6 +299,7 @@ function buildChatMessages(requestBody) {
     }
 
     if (item.type === "message") {
+      flushPendingAssistantToolCalls();
       const text = extractTextSegments(item.content).join("\n");
       if (text.trim()) {
         const role = normalizeChatRole(item.role);
@@ -291,8 +314,7 @@ function buildChatMessages(requestBody) {
         unsupportedItems.push("function_call");
         continue;
       }
-      messages.push(makeAssistantToolCallMessage([toolCall]));
-      seenToolCallIds.add(toolCall.id);
+      enqueueAssistantToolCall(toolCall);
       continue;
     }
 
@@ -306,11 +328,11 @@ function buildChatMessages(requestBody) {
       if (!seenToolCallIds.has(callId)) {
         const rememberedToolCall = normalizeStoredToolCall(rememberedToolCalls.get(callId));
         if (rememberedToolCall) {
-          messages.push(makeAssistantToolCallMessage([rememberedToolCall]));
-          seenToolCallIds.add(callId);
+          enqueueAssistantToolCall(rememberedToolCall);
         }
       }
 
+      flushPendingAssistantToolCalls();
       messages.push({
         role: "tool",
         tool_call_id: callId,
@@ -322,6 +344,7 @@ function buildChatMessages(requestBody) {
     unsupportedItems.push(item.type || "unknown");
   }
 
+  flushPendingAssistantToolCalls();
   return { messages, unsupportedItems };
 }
 

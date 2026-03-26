@@ -49,6 +49,17 @@ The strongest current read is:
       `shim-tool-ok`
     - Codex still emitted `failed to record rollout items: channel closed`
       logs during the otherwise successful run
+- the shim now also proves a broader multi-step tool chain against the mock
+  upstream:
+  - first tool call
+  - second tool call
+  - final assistant answer
+  - exact final output:
+    - `shim-tool-a`
+    - `shim-tool-b`
+  - this is the cleanest broader parity proof today because same-turn
+    parallel multi-tool behavior is still a fibrous edge under
+    `parallel_tool_calls:false`
 - manual `chat/completions` works for
   `nvidia/nemotron-3-super-120b-a12b`
 - NVIDIA's `chat_template_kwargs.force_nonempty_content = true` guidance
@@ -145,6 +156,9 @@ extra body is needed, `openai/codex#5458` becomes the natural upstream lane.
 - `docs/shim-tool-roundtrip-mock-2026-03-26.md`
   - local proof that the shim can round-trip a standard function tool call
     through Codex against a mock chat upstream
+- `docs/shim-multi-step-tool-chain-2026-03-26.md`
+  - local proof that the shim can carry a broader sequential multi-step tool
+    chain through Codex against a mock chat upstream
 - `docs/self-hosted-tool-roundtrip-real-2026-03-26.md`
   - stronger local proof that the shim can carry a real tool-bearing Codex
     turn end-to-end against the tested self-hosted NVIDIA route
@@ -194,6 +208,13 @@ Optional:
 - `MOCK_UPSTREAM_PORT`
 - `MOCK_MODEL`
 - `MOCK_TOOL_COMMAND`
+- `MOCK_TOOL_COMMANDS_JSON`
+  - optional JSON array for broader multi-step mock tool chains
+- `MOCK_TOOL_CALL_MODE`
+  - optional mock tool-call mode
+  - current useful values:
+    - `sequential`
+    - `parallel`
 
 Instead of exporting variables into the launching shell, you can place them in
 `./.env` inside this repo. The smoke scripts will source that file
@@ -267,6 +288,17 @@ unless you override it explicitly.
 ```bash
 POC_CODEX_SANDBOX=danger-full-access ./scripts/smoke-codex-shim-mock-tool-call.sh
 ```
+
+9. If you want a broader mock-backed multi-step tool-chain proof, run:
+
+```bash
+bash ./scripts/smoke-codex-shim-mock-multi-tool-call.sh
+```
+
+That path currently defaults to:
+
+- `MOCK_TOOL_CALL_MODE=sequential`
+- `MOCK_TOOL_COMMANDS_JSON='["printf shim-tool-a","printf shim-tool-b"]'`
 
 ## Self-Hosted Refinement Path
 
