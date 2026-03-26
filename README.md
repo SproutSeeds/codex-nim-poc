@@ -27,14 +27,20 @@ The strongest current read is:
   `POST /v1/responses` across a wider six-model matrix
 - real `codex exec` through a custom provider fails at that same
   `/v1/responses` boundary
+- a self-hosted NIM run on `umbra` with an `RTX 4090` now also separates
+  cleanly:
+  - `GET /v1/health/ready` returns `200`
+  - `GET /v1/models` returns `200`
+  - `POST /v1/chat/completions` returns `200`
+  - `POST /v1/responses` returns `404 Not Found`
 - manual `chat/completions` works for
   `nvidia/nemotron-3-super-120b-a12b`
 - NVIDIA's `chat_template_kwargs.force_nonempty_content = true` guidance
   materially changes the chat response shape
 
-So `openai/codex#5458` still matters, but not as the first blocker on this
-tested hosted path. The first blocker is hosted `/v1/responses` availability or
-compatibility.
+So `openai/codex#5458` still matters, but not as the first blocker on the
+tested NVIDIA paths. The first blocker is `/v1/responses` availability or
+compatibility itself.
 
 ## Why This Exists
 
@@ -86,6 +92,9 @@ extra body is needed, `openai/codex#5458` becomes the natural upstream lane.
 - `docs/self-hosted-proof-plan-2026-03-25.md`
   - exact next-step plan for separating hosted Integrate behavior from
     self-hosted NIM behavior
+- `docs/self-hosted-vllm-proof-2026-03-26.md`
+  - completed self-hosted proof on `umbra` after the driver/runtime upgrade,
+    vLLM profile prefetch, and warmed relaunch
 - `scripts/smoke-nim-api.sh`
   - direct NVIDIA NIM smoke against `/v1/models` and `/v1/responses`
 - `scripts/smoke-nim-responses-matrix.sh`
@@ -210,9 +219,18 @@ Current status of that path:
   - `nvcr.io/nim/nvidia/llama-3.1-nemotron-nano-8b-v1:1.8.2`
   - `docker image inspect` still shows `CUDA_VERSION = 12.8.0`
   - short launch check still fails on `cuda>=12.8`
+- after upgrading the Windows driver on `umbra` to `595.79`, the
+  `cuda>=12.8` blocker cleared
+- after a cache-permission fix plus a warmed vLLM profile prefetch, the
+  self-hosted service came up on:
+  - `GET /v1/health/ready`
+  - `GET /v1/models`
+  - `POST /v1/chat/completions`
+- on that same self-hosted run, `POST /v1/responses` still returned
+  `404 Not Found`
 
-For this exact model repository, the cleanest next move now looks like a host
-driver/runtime upgrade rather than more blind tag guessing.
+So the self-hosted refinement is no longer just a plan. On this tested
+self-hosted route, the API surface still stops short of `/v1/responses`.
 
 ## Strongest Public Artifact
 

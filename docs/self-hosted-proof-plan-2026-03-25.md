@@ -12,6 +12,25 @@ next question:
 - does a self-hosted NIM deployment expose a working `/v1/responses` path even
   though the tested hosted Integrate surface returned `404`?
 
+## March 26, 2026 Result
+
+This plan is now partially resolved.
+
+The completed self-hosted run is recorded in:
+
+- `docs/self-hosted-vllm-proof-2026-03-26.md`
+
+The strongest result from that run is:
+
+- self-hosted `GET /v1/health/ready` returned `200`
+- self-hosted `GET /v1/models` returned `200`
+- self-hosted `POST /v1/chat/completions` returned `200`
+- self-hosted `POST /v1/responses` returned `404 Not Found`
+
+So the self-hosted path now says something materially stronger than this plan
+did originally: the lack of `/v1/responses` is not only a hosted Integrate
+surface issue on the tested NVIDIA path.
+
 ## Why This Matters
 
 If self-hosted NIM exposes working Responses semantics, then the current public
