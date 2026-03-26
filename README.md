@@ -33,6 +33,22 @@ The strongest current read is:
   - `GET /v1/models` returns `200`
   - `POST /v1/chat/completions` returns `200`
   - `POST /v1/responses` returns `404 Not Found`
+- a thin local `/v1/responses` shim can already bridge Codex to that tested
+  self-hosted NIM route for a tool-free first pass:
+  - real `codex exec` succeeded through the shim
+  - the first-pass smoke returned `OK`
+- the same shim now supports a narrow standard-function tool round trip:
+  - against a mock `chat/completions` upstream, real `codex exec` completed
+    with final assistant output `shim-tool-ok`
+  - against the real self-hosted NIM route, real `codex exec` now completes a
+    tool-bearing turn end-to-end too
+  - the strongest real run used upstream chat extra body
+    `{"temperature":0}` and preserved the exact requested tool arguments
+  - remaining caveats are now narrower:
+    - final assistant wording is still verbose rather than the literal
+      `shim-tool-ok`
+    - Codex still emitted `failed to record rollout items: channel closed`
+      logs during the otherwise successful run
 - manual `chat/completions` works for
   `nvidia/nemotron-3-super-120b-a12b`
 - NVIDIA's `chat_template_kwargs.force_nonempty_content = true` guidance
@@ -108,6 +124,33 @@ extra body is needed, `openai/codex#5458` becomes the natural upstream lane.
   - host-readiness check for a self-hosted NIM proof path
 - `scripts/smoke-self-hosted-nim.sh`
   - local endpoint validation for a running self-hosted NIM
+- `scripts/nim-responses-shim.mjs`
+  - thin local bridge from Codex `/v1/responses` requests to NVIDIA
+    `chat/completions`
+- `scripts/smoke-codex-shim.sh`
+  - end-to-end Codex smoke through the local shim and an SSH tunnel to the
+    self-hosted NIM
+- `scripts/smoke-codex-shim-tool-call.sh`
+  - real self-hosted NIM tool-call repro through the shim
+- `scripts/mock-chat-tools-upstream.mjs`
+  - local mock `chat/completions` upstream for shim tool-cycle validation
+- `scripts/smoke-codex-shim-mock-tool-call.sh`
+  - end-to-end Codex smoke proving the shim's narrow tool round trip without
+    depending on NVIDIA tool support
+- `configs/codex.nvidia-nim-shim.example.toml`
+  - example local Codex config pointing at the shim
+- `docs/shim-first-pass-2026-03-26.md`
+  - first local proof that Codex can work through the shim against the tested
+    self-hosted NIM route
+- `docs/shim-tool-roundtrip-mock-2026-03-26.md`
+  - local proof that the shim can round-trip a standard function tool call
+    through Codex against a mock chat upstream
+- `docs/self-hosted-tool-roundtrip-real-2026-03-26.md`
+  - stronger local proof that the shim can carry a real tool-bearing Codex
+    turn end-to-end against the tested self-hosted NVIDIA route
+- `docs/self-hosted-tool-request-crash-2026-03-26.md`
+  - earlier local proof of an unhealthy/crash path before the stronger
+    stabilized tool-bearing run
 
 ## Required Environment
 
@@ -133,6 +176,24 @@ Optional:
   - optional model override if `/v1/models` does not return the desired served
     id
 - `SELF_HOSTED_NIM_PROMPT`
+- `SHIM_TUNNEL_PORT`
+  - default: `8001`
+- `SHIM_PORT`
+  - default: `8011`
+- `SHIM_UPSTREAM_BASE_URL`
+  - optional override for the shim upstream base URL
+- `SHIM_MODEL`
+  - optional override for the model the shim forwards to
+- `NIM_CHAT_EXTRA_BODY_JSON`
+  - raw JSON object merged into the upstream `chat/completions`
+    request body made by the shim
+  - the strongest real tool-bearing run used:
+    - `{"temperature":0}`
+- `SHIM_TOOL_ALLOWLIST`
+  - optional comma-separated function-tool allow-list for the shim
+- `MOCK_UPSTREAM_PORT`
+- `MOCK_MODEL`
+- `MOCK_TOOL_COMMAND`
 
 Instead of exporting variables into the launching shell, you can place them in
 `./.env` inside this repo. The smoke scripts will source that file
@@ -173,6 +234,39 @@ cp .env.example .env
 5. If the direct API smoke works but the Codex smoke fails, compare the saved
    request/response artifacts and decide whether the missing primitive belongs
    in `openai/codex#5458`.
+
+6. If you want a local workaround against the self-hosted NIM route, run:
+
+```bash
+./scripts/smoke-codex-shim.sh
+```
+
+That script:
+
+- opens an SSH tunnel to `umbra`
+- starts the local shim
+- runs real `codex exec` against the shim
+- saves Codex, shim, and upstream artifacts together
+
+7. If you want the real self-hosted NIM tool-bearing repro through the shim,
+   run:
+
+```bash
+POC_CODEX_SANDBOX=danger-full-access ./scripts/smoke-codex-shim-tool-call.sh
+```
+
+That script now defaults the shim's upstream chat request to:
+
+- `NIM_CHAT_EXTRA_BODY_JSON='{"temperature":0}'`
+
+unless you override it explicitly.
+
+8. If you want to validate the shim's narrow tool round trip independent of
+   NVIDIA's tool support, run:
+
+```bash
+POC_CODEX_SANDBOX=danger-full-access ./scripts/smoke-codex-shim-mock-tool-call.sh
+```
 
 ## Self-Hosted Refinement Path
 

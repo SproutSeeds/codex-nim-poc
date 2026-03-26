@@ -1,0 +1,14 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+model = "meta/llama-3.1-8b-instruct"
+model_provider = "nvidia_nim_shim"
+
+[model_providers.nvidia_nim_shim]
+name = "NVIDIA NIM Shim"
+base_url = "http://127.0.0.1:8011/v1"
+env_key = "PATH"
+wire_api = "responses"
+supports_websockets = false
+request_max_retries = 1
+stream_max_retries = 1
+stream_idle_timeout_ms = 600000
