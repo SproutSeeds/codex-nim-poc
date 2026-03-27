@@ -19,6 +19,8 @@ const allowedToolNames = new Set(
 const forceSingleToolChoice = /^(1|true|yes|on)$/i.test(
   process.env.SHIM_FORCE_SINGLE_TOOL_CHOICE || "",
 );
+const DEFAULT_BASE_INSTRUCTIONS =
+  "You are Codex, a coding agent based on GPT-5. You and the user share the same workspace and collaborate to achieve the user's goals.";
 
 mkdirSync(artifactDir, { recursive: true });
 
@@ -69,6 +71,64 @@ function mergeObject(target, extra) {
     }
   }
   return target;
+}
+
+function buildShimModelInfo(upstreamModel = {}) {
+  const slug = typeof upstreamModel.id === "string" && upstreamModel.id.length > 0
+    ? upstreamModel.id
+    : forcedModel || "nvidia-nim-model";
+  const contextWindow = Number.isFinite(upstreamModel.max_model_len)
+    ? upstreamModel.max_model_len
+    : null;
+
+  return {
+    slug,
+    display_name: slug,
+    description: null,
+    default_reasoning_level: null,
+    supported_reasoning_levels: [],
+    shell_type: "default",
+    visibility: "list",
+    supported_in_api: true,
+    priority: 50,
+    availability_nux: null,
+    upgrade: null,
+    base_instructions: DEFAULT_BASE_INSTRUCTIONS,
+    model_messages: null,
+    supports_reasoning_summaries: false,
+    default_reasoning_summary: "auto",
+    support_verbosity: false,
+    default_verbosity: null,
+    apply_patch_tool_type: null,
+    web_search_tool_type: "text",
+    truncation_policy: {
+      mode: "bytes",
+      limit: 10_000,
+    },
+    supports_parallel_tool_calls: false,
+    supports_image_detail_original: false,
+    context_window: contextWindow,
+    auto_compact_token_limit: null,
+    effective_context_window_percent: 95,
+    experimental_supported_tools: [],
+    input_modalities: ["text"],
+    supports_search_tool: false,
+  };
+}
+
+function normalizeModelsPayload(text) {
+  const parsed = JSON.parse(text);
+  if (parsed && Array.isArray(parsed.models)) {
+    return parsed;
+  }
+
+  if (parsed && Array.isArray(parsed.data)) {
+    return {
+      models: parsed.data.map((model) => buildShimModelInfo(model)),
+    };
+  }
+
+  throw new Error("unsupported upstream /models payload shape");
 }
 
 function extractTextSegments(content = []) {
@@ -389,6 +449,94 @@ function normalizeAssistantContent(message) {
   return "";
 }
 
+function extractLeadingJsonObject(text) {
+  if (typeof text !== "string") {
+    return null;
+  }
+
+  const trimmed = text.trimStart();
+  if (!trimmed.startsWith("{")) {
+    return null;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < trimmed.length; index += 1) {
+    const char = trimmed[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") {
+      depth += 1;
+      continue;
+    }
+
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        const candidate = trimmed.slice(0, index + 1);
+        try {
+          return {
+            value: JSON.parse(candidate),
+            remainder: trimmed.slice(index + 1).trim(),
+          };
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function maybePromoteAssistantPseudoToolCall(text, allowedToolNames) {
+  const extracted = extractLeadingJsonObject(text);
+  if (!extracted || !extracted.value || typeof extracted.value !== "object") {
+    return null;
+  }
+
+  const name = typeof extracted.value.name === "string" ? extracted.value.name : "";
+  if (!name || (allowedToolNames.size > 0 && !allowedToolNames.has(name))) {
+    return null;
+  }
+
+  let parametersText = extracted.value.parameters;
+  if (typeof parametersText !== "string") {
+    parametersText = JSON.stringify(parametersText ?? {});
+  }
+
+  return {
+    toolCall: {
+      id: `nim_promoted_tool_call_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`,
+      name,
+      arguments: parametersText,
+    },
+    remainderText: extracted.remainder,
+    originalText: text,
+  };
+}
+
 function toSse(events) {
   return events
     .map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)
@@ -462,14 +610,17 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === "GET" && req.url === "/shutdown") {
+  const requestUrl = new URL(req.url, "http://127.0.0.1");
+  const requestPath = requestUrl.pathname;
+
+  if (req.method === "GET" && requestPath === "/shutdown") {
     res.writeHead(200, jsonHeaders().headers);
     res.end(JSON.stringify({ ok: true }));
     setTimeout(() => server.close(() => process.exit(0)), 50);
     return;
   }
 
-  if (req.method === "GET" && req.url === "/v1/health/ready") {
+  if (req.method === "GET" && requestPath === "/v1/health/ready") {
     try {
       const { response, text } = await proxyJson(`${upstreamBaseUrl}/health/ready`);
       res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
@@ -481,11 +632,22 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === "GET" && req.url === "/v1/models") {
+  if (req.method === "GET" && requestPath === "/v1/models") {
     try {
-      const { response, text } = await proxyJson(`${upstreamBaseUrl}/models`);
-      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-      res.end(text);
+      const upstreamModelsUrl = new URL(`${upstreamBaseUrl}/models`);
+      requestUrl.searchParams.forEach((value, key) => {
+        upstreamModelsUrl.searchParams.append(key, value);
+      });
+      const { response, text } = await proxyJson(upstreamModelsUrl);
+      if (!response.ok) {
+        res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+        res.end(text);
+        return;
+      }
+
+      const payload = normalizeModelsPayload(text);
+      res.writeHead(200, jsonHeaders(200).headers);
+      res.end(JSON.stringify(payload));
     } catch (error) {
       res.writeHead(502, jsonHeaders(502).headers);
       res.end(JSON.stringify({ error: String(error) }));
@@ -493,7 +655,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.method !== "POST" || req.url !== "/v1/responses") {
+  if (req.method !== "POST" || requestPath !== "/v1/responses") {
     res.writeHead(404, jsonHeaders(404).headers);
     res.end(JSON.stringify({ detail: "Not Found" }));
     return;
@@ -591,10 +753,30 @@ const server = http.createServer(async (req, res) => {
 
     const upstreamJson = JSON.parse(text);
     const assistantMessage = upstreamJson?.choices?.[0]?.message;
-    const assistantText = normalizeAssistantContent(assistantMessage);
-    const assistantToolCalls = (assistantMessage?.tool_calls || [])
+    let assistantText = normalizeAssistantContent(assistantMessage);
+    let assistantToolCalls = (assistantMessage?.tool_calls || [])
       .map(normalizeUpstreamToolCall)
       .filter(Boolean);
+    const allowedUpstreamToolNames = new Set(chatTools.map((tool) => tool.function.name));
+    const priorToolTurn = hasPriorToolTurn(requestBody);
+
+    if (assistantToolCalls.length === 0 && assistantText) {
+      const promotedPseudoToolCall = maybePromoteAssistantPseudoToolCall(
+        assistantText,
+        allowedUpstreamToolNames,
+      );
+      if (promotedPseudoToolCall) {
+        assistantToolCalls = [promotedPseudoToolCall.toolCall];
+        assistantText = priorToolTurn ? "" : promotedPseudoToolCall.remainderText;
+        writeArtifact(`${requestId}-nim-chat-pseudo-tool-promotion.json`, {
+          promoted: true,
+          originalText: promotedPseudoToolCall.originalText,
+          promotedToolCall: promotedPseudoToolCall.toolCall,
+          remainderText: promotedPseudoToolCall.remainderText,
+          droppedRemainderText: priorToolTurn && promotedPseudoToolCall.remainderText.length > 0,
+        });
+      }
+    }
 
     for (const toolCall of assistantToolCalls) {
       rememberedToolCalls.set(toolCall.id, toolCall);
